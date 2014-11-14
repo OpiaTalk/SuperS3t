@@ -2,6 +2,7 @@ package com.perceptus.supers3t;
 
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.Vertx;
+import org.vertx.java.core.VertxFactory;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.http.HttpClient;
 import org.vertx.java.core.http.HttpClientRequest;
@@ -10,7 +11,7 @@ import org.vertx.java.core.http.HttpClientResponse;
 public class S3Client {
     public static final String DEFAULT_ENDPOINT = "s3.amazonaws.com";
 
-    private static final Vertx vertx            = Vertx.newVertx();
+    private static final Vertx vertx            = VertxFactory.newVertx();
 
     private final String       awsAccessKey;
     private final String       awsSecretKey;
@@ -30,6 +31,12 @@ public class S3Client {
     }
 
     public S3Client(Vertx vertx,
+        String accessKey,
+        String secretKey) {
+        this(vertx, accessKey, secretKey, DEFAULT_ENDPOINT);
+    }
+
+    public S3Client(Vertx vertx,
                     String accessKey,
                     String secretKey,
                     String endpoint) {
@@ -38,6 +45,7 @@ public class S3Client {
 
         this.client = vertx.createHttpClient().setHost(endpoint);
     }
+
 
     // Direct call (async)
     // -----------
