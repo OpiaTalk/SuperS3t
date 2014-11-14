@@ -1,9 +1,10 @@
 /**
- * 
+ *
  */
 package com.perceptus.supers3t.test;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import com.perceptus.supers3t.S3Client;
+import com.perceptus.supers3t.S3ClientRequest;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -14,29 +15,28 @@ import org.vertx.java.core.Handler;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.http.HttpClientResponse;
 
-import com.perceptus.supers3t.S3Client;
-import com.perceptus.supers3t.S3ClientRequest;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author spartango
- * 
+ *
  */
 public class TestS3Client {
-    private static final Logger logger         = LoggerFactory.getLogger(TestS3Client.class);
+    private static final Logger logger = LoggerFactory.getLogger(TestS3Client.class);
 
-    private static final int    expectedLength = 4096;                                       // bytes
+    private static final int expectedLength = 4096; // bytes
 
-    private static final String accessKey      = "";
-    private static final String secretKey      = "";
+    private static final String accessKey = System.getProperty("s3.accessKey");
+    private static final String secretKey = System.getProperty("s3.secretKey");
+    private static final String testBucket = System.getProperty("s3.testBucket");
 
-    private static final String testBucket     = "Perceptus";
-
-    private S3Client            client;
+    private S3Client client;
 
     /**
      * @throws java.lang.Exception
      */
-    @Before public void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         client = new S3Client(accessKey, secretKey);
     }
 
@@ -53,38 +53,34 @@ public class TestS3Client {
         final AtomicInteger responseCode = new AtomicInteger();
 
         synchronized (responseBody) {
-            client.get(testBucket,
-                       "testObject",
-                       new Handler<HttpClientResponse>() {
+            client.get(testBucket, "testObject", new Handler<HttpClientResponse>() {
 
-                           @Override public void
-                                   handle(HttpClientResponse event) {
-                               responseCode.set(event.statusCode);
-                               if (event.statusCode != 200) {
-                                   synchronized (responseBody) {
-                                       // This is a failed request
-                                       logger.error("Bad response: "
-                                                    + event.statusCode);
-                                       responseBody.notify();
-                                   }
-                                   return;
-                               }
+                @Override
+                public void handle(HttpClientResponse event) {
+                    responseCode.set(event.statusCode());
+                    if (event.statusCode() != 200) {
+                        synchronized (responseBody) {
+                            // This is a failed request
+                            logger.error("Bad response: " + event.statusCode());
+                            responseBody.notify();
+                        }
+                        return;
+                    }
 
-                               // Try to download the body
-                               event.bodyHandler(new Handler<Buffer>() {
-                                   @Override public void handle(Buffer event) {
-                                       // Append the body on
-                                       synchronized (responseBody) {
-                                           logger.info("Got body: "
-                                                       + event.length()
-                                                       + "bytes");
-                                           responseBody.appendBuffer(event);
-                                           responseBody.notify();
-                                       }
-                                   }
-                               });
-                           }
-                       });
+                    // Try to download the body
+                    event.bodyHandler(new Handler<Buffer>() {
+                        @Override
+                        public void handle(Buffer event) {
+                            // Append the body on
+                            synchronized (responseBody) {
+                                logger.info("Got body: " + event.length() + "bytes");
+                                responseBody.appendBuffer(event);
+                                responseBody.notify();
+                            }
+                        }
+                    });
+                }
+            });
 
             try {
                 responseBody.wait(10000);
@@ -108,18 +104,15 @@ public class TestS3Client {
         final AtomicInteger responseCode = new AtomicInteger();
 
         synchronized (responseCode) {
-            client.put(testBucket,
-                       "testObject",
-                       new Buffer(new byte[expectedLength]),
-                       new Handler<HttpClientResponse>() {
-                           @Override public void
-                                   handle(HttpClientResponse event) {
-                               synchronized (responseCode) {
-                                   responseCode.set(event.statusCode);
-                                   responseCode.notify();
-                               }
-                           }
-                       });
+            client.put(testBucket, "testObject", new Buffer(new byte[expectedLength]), new Handler<HttpClientResponse>() {
+                @Override
+                public void handle(HttpClientResponse event) {
+                    synchronized (responseCode) {
+                        responseCode.set(event.statusCode());
+                        responseCode.notify();
+                    }
+                }
+            });
 
             try {
                 responseCode.wait(10000);
@@ -142,17 +135,15 @@ public class TestS3Client {
         final AtomicInteger responseCode = new AtomicInteger();
 
         synchronized (responseCode) {
-            client.delete(testBucket,
-                          "testObject",
-                          new Handler<HttpClientResponse>() {
-                              @Override public void
-                                      handle(HttpClientResponse event) {
-                                  synchronized (responseCode) {
-                                      responseCode.set(event.statusCode);
-                                      responseCode.notify();
-                                  }
-                              }
-                          });
+            client.delete(testBucket, "testObject", new Handler<HttpClientResponse>() {
+                @Override
+                public void handle(HttpClientResponse event) {
+                    synchronized (responseCode) {
+                        responseCode.set(event.statusCode());
+                        responseCode.notify();
+                    }
+                }
+            });
 
             try {
                 responseCode.wait(10000);
@@ -170,26 +161,24 @@ public class TestS3Client {
      * {@link com.perceptus.supers3t.S3Client#createPutRequest(java.lang.String, java.lang.String, org.vertx.java.core.Handler)}
      * .
      */
-    @Test public void testCreatePutRequest() {
+    @Test
+    public void testCreatePutRequest() {
         // Things we need from the response
         final AtomicInteger responseCode = new AtomicInteger();
 
         final Buffer toUpload = new Buffer(new byte[expectedLength]);
         synchronized (responseCode) {
-            S3ClientRequest request = client.createPutRequest(testBucket,
-                                                              "testObject",
-                                                              new Handler<HttpClientResponse>() {
-                                                                  @Override public void
-                                                                          handle(HttpClientResponse event) {
-                                                                      logger.info("Response message: "
-                                                                                  + event.statusMessage);
+            S3ClientRequest request = client.createPutRequest(testBucket, "testObject", new Handler<HttpClientResponse>() {
+                @Override
+                public void handle(HttpClientResponse event) {
+                    logger.info("Response message: " + event.statusMessage());
 
-                                                                      synchronized (responseCode) {
-                                                                          responseCode.set(event.statusCode);
-                                                                          responseCode.notify();
-                                                                      }
-                                                                  }
-                                                              });
+                    synchronized (responseCode) {
+                        responseCode.set(event.statusCode());
+                        responseCode.notify();
+                    }
+                }
+            });
             request.end(toUpload);
             try {
                 responseCode.wait(10000);
@@ -207,7 +196,8 @@ public class TestS3Client {
      * {@link com.perceptus.supers3t.S3Client#createGetRequest(java.lang.String, java.lang.String, org.vertx.java.core.Handler)}
      * .
      */
-    @Test public void testCreateGetRequest() {
+    @Test
+    public void testCreateGetRequest() {
         // Do a testPut first
         testPut();
 
@@ -216,49 +206,44 @@ public class TestS3Client {
         final AtomicInteger responseCode = new AtomicInteger();
 
         synchronized (responseBody) {
-            S3ClientRequest request = client.createGetRequest(testBucket,
-                                                              "testObject",
-                                                              new Handler<HttpClientResponse>() {
+            S3ClientRequest request = client.createGetRequest(testBucket, "testObject", new Handler<HttpClientResponse>() {
 
-                                                                  @Override public void
-                                                                          handle(HttpClientResponse event) {
-                                                                      responseCode.set(event.statusCode);
-                                                                      if (event.statusCode != 200) {
-                                                                          synchronized (responseBody) {
-                                                                              // This
-                                                                              // is
-                                                                              // a
-                                                                              // failed
-                                                                              // request
-                                                                              logger.error("Bad response: "
-                                                                                           + event.statusCode);
-                                                                              responseBody.notify();
-                                                                          }
-                                                                          return;
-                                                                      }
+                @Override
+                public void handle(HttpClientResponse event) {
+                    responseCode.set(event.statusCode());
+                    if (event.statusCode() != 200) {
+                        synchronized (responseBody) {
+                            // This
+                            // is
+                            // a
+                            // failed
+                            // request
+                            logger.error("Bad response: " + event.statusCode());
+                            responseBody.notify();
+                        }
+                        return;
+                    }
 
-                                                                      // Try to
-                                                                      // download
-                                                                      // the
-                                                                      // body
-                                                                      event.bodyHandler(new Handler<Buffer>() {
-                                                                          @Override public void
-                                                                                  handle(Buffer event) {
-                                                                              // Append
-                                                                              // the
-                                                                              // body
-                                                                              // on
-                                                                              synchronized (responseBody) {
-                                                                                  logger.info("Got body: "
-                                                                                              + event.length()
-                                                                                              + "bytes");
-                                                                                  responseBody.appendBuffer(event);
-                                                                                  responseBody.notify();
-                                                                              }
-                                                                          }
-                                                                      });
-                                                                  }
-                                                              });
+                    // Try to
+                    // download
+                    // the
+                    // body
+                    event.bodyHandler(new Handler<Buffer>() {
+                        @Override
+                        public void handle(Buffer event) {
+                            // Append
+                            // the
+                            // body
+                            // on
+                            synchronized (responseBody) {
+                                logger.info("Got body: " + event.length() + "bytes");
+                                responseBody.appendBuffer(event);
+                                responseBody.notify();
+                            }
+                        }
+                    });
+                }
+            });
             request.end();
             try {
                 responseBody.wait(10000);
@@ -277,7 +262,8 @@ public class TestS3Client {
      * {@link com.perceptus.supers3t.S3Client#createDeleteRequest(java.lang.String, java.lang.String, org.vertx.java.core.Handler)}
      * .
      */
-    @Test public void testCreateDeleteRequest() {
+    @Test
+    public void testCreateDeleteRequest() {
         // Test put may be required
         testPut();
 
@@ -285,17 +271,15 @@ public class TestS3Client {
         final AtomicInteger responseCode = new AtomicInteger();
 
         synchronized (responseCode) {
-            S3ClientRequest request = client.createDeleteRequest(testBucket,
-                                                                 "testObject",
-                                                                 new Handler<HttpClientResponse>() {
-                                                                     @Override public void
-                                                                             handle(HttpClientResponse event) {
-                                                                         synchronized (responseCode) {
-                                                                             responseCode.set(event.statusCode);
-                                                                             responseCode.notify();
-                                                                         }
-                                                                     }
-                                                                 });
+            S3ClientRequest request = client.createDeleteRequest(testBucket, "testObject", new Handler<HttpClientResponse>() {
+                @Override
+                public void handle(HttpClientResponse event) {
+                    synchronized (responseCode) {
+                        responseCode.set(event.statusCode());
+                        responseCode.notify();
+                    }
+                }
+            });
             request.end();
 
             try {
@@ -309,7 +293,8 @@ public class TestS3Client {
         Assert.assertEquals(204, responseCode.intValue());
     }
 
-    @Test public void testLifeCycle() {
+    @Test
+    public void testLifeCycle() {
         testPut();
         testGet();
         testDelete();
