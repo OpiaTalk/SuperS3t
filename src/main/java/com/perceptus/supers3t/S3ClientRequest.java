@@ -1,7 +1,5 @@
 package com.perceptus.supers3t;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.MultiMap;
 import org.vertx.java.core.buffer.Buffer;
@@ -18,7 +16,6 @@ import java.util.Date;
 
 public class S3ClientRequest implements HttpClientRequest {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-    private static final Logger           logger     = LoggerFactory.getLogger(S3ClientRequest.class);
 
     private final HttpClientRequest       request;
 
@@ -154,7 +151,7 @@ public class S3ClientRequest implements HttpClientRequest {
                 signature = "ERRORSIGNATURE";
                 // This will totally fail,
                 // but downstream users can handle it
-                logger.error("Failed to sign S3 request due to " + e);
+                System.out.println("Failed to sign S3 request due to " + e.getMessage());
             }
             String authorization = "AWS" + " " + awsAccessKey + ":" + signature;
 
