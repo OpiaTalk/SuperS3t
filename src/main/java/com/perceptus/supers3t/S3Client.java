@@ -46,7 +46,6 @@ public class S3Client {
         this.client = vertx.createHttpClient().setHost(endpoint);
     }
 
-
     // Direct call (async)
     // -----------
 
